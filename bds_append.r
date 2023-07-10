@@ -1,4 +1,4 @@
-# Load packages
+# Load only the packages you need
 library(dplyr)
 library(haven)
 library(tools)
@@ -49,7 +49,7 @@ summary_stats <- merged %>% group_by(year) %>%
             q3_diff = quantile(diff_firms, 0.75))
 
 # Plot the average and interquartile range of diff_firms by year
-ggplot2(summary_stats, aes(x = year, y = avg_diff)) +
+ggplot(summary_stats, aes(x = year, y = avg_diff)) +
   geom_line() +
   geom_ribbon(aes(ymin = q1_diff, ymax = q3_diff), alpha = 0.2) +
   labs(x = "Year", y = "Difference in Firms (BDS - DA)")
