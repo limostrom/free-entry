@@ -3,53 +3,98 @@ library(dplyr)
 library(haven)
 library(tools)
 library(ggplot2)
+library(tidyr)
 
-# Appending all BDS files into one
+# Appending BDS files for national totals
 setwd("~/Dropbox/Personal Document Backup/Booth/Second Year/Y2 Paper/Finance & Dynamism/")
 filepath <- "raw-data/bds"
-filenames <- list.files(path = filepath, pattern = "*.csv", full.names = TRUE)
+filenames <- list.files(path = filepath, pattern = "^bds_tot_\\d{4}.csv", full.names = TRUE)
 bds <- lapply(filenames, read.csv, header = TRUE)
 bds <- do.call(rbind, bds)
 
 # Rename columns
-colnames(bds) <- c("rownum","cbsaname", "naics2desc", "year", "firms", "estabs", "emp", "year2","naics2","cbsacode")
+colnames(bds) <- c("rownum","country", "naics2desc", "year", "firmage", "firms", "estabs", "emp", "year2", "ones")
 
 # Remove rownum and year2
-bds <- bds %>% select(-rownum, -year2)
+bds <- bds %>% select(year, firmage, firms, estabs)
+# Keep only firmage == 1 (total) and firmage == 10 (age 0)
+bds <- bds %>% filter(firmage %in% c(1, 10))
+# Reshape the data
+bds_wide <- bds %>%
+  pivot_wider(names_from = firmage, values_from = c("firms", "estabs"))
 
 #Read in Infogroup tabs from Stata
 procdata <- "processed-data/startup_rates"
 
-aggfiles <- list.files(path = procdata, pattern = "^a.*_sr.dta", full.names = TRUE)
-agg <- lapply(aggfiles, read_dta)
-agg <- do.call(rbind, agg)
-agg$naics2 <- rep(0, nrow(agg))
+axlefiles <- list.files(path = procdata, pattern = "^a.*_sr.dta", full.names = TRUE)
+axle <- lapply(axlefiles, read_dta)
+axle <- do.call(rbind, axle)
 
-cbsafiles <- list.files(path = procdata, pattern = "^c.*_sr.dta", full.names = TRUE)
-cbsa <- lapply(cbsafiles, read_dta)
-cbsa <- do.call(rbind, cbsa)
-cbsa$naics2 <- rep(0, nrow(cbsa))
+# Merge bds with dataaxle
+merged <- merge(bds_wide, axle, by = "year")
+colnames(merged) <- c("year", "bds_firms_tot", "bds_firms_age0", 
+            "bds_estabs_tot", "bds_estabs_age0", "axle_firms_age0",
+            "axle_firms_tot", "axle_sr")
+merged$bds_firms_mns <- merged$bds_firms_tot/1000000
+merged$bds_firms_age0_ths <- merged$bds_firms_age0/1000
+merged$axle_firms_mns <- merged$axle_firms_tot/1000000
+merged$axle_firms_age0_ths <- merged$axle_firms_age0/1000
+# Compute startup rate for BDS
+merged$bds_sr <- merged$bds_firms_age0/merged$bds_firms_tot * 100
+merged$axle_sr <- merged$axle_sr * 100
 
-# Select rows from bds with naics2 == 0
-bds_indtot <- bds %>% filter(naics2 == 0)
 
-# Merge bds_filtered with cbsa
-merged <- merge(bds_indtot, cbsa, by = c("cbsacode", "year"))
-colnames(merged) <- c("cbsacode", "year", 'cbsanamex', "naics2desc", "firms_bds", 
-                      "estabs_bds", "emp_bds", "naics2x", "cbsanamey", "entrants_da", 
-                      "firms_da", "sr_da", "naics2y")
+# Create a line plot of total firms by year
+plot1 <- ggplot(merged, aes(x = year)) +
+  geom_line(aes(y = bds_firms_mns, color = "BDS")) +
+  geom_line(aes(y = axle_firms_mns, color = "Axle")) +
+  labs(x = "Year", y = "Total Firms (Millions)", color = "Source") +
+  scale_color_manual(values = c("BDS" = "#2a2a2a", "Axle" = "blue")) +
+  scale_y_continuous(limits = c(0, NA)) +
+  theme(panel.background = element_rect(fill = "white"),
+        axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14),
+        legend.position = "bottom",
+        legend.box = "horizontal",
+        legend.margin = margin(t = 0, r = 0, b = 0, l = 0),
+        legend.text = element_text(size = 12),
+        axis.line = element_line(color = "black", linewidth = 0.5))
+# Export the plot as a PDF
+ggsave("output/bds_comparison_total.pdf", plot1, width = 8, height = 6)
 
-# Compute difference between firms in bds and da
-merged$diff_firms <- merged$firms_bds - merged$firms_da
 
-# Compute the average and interquartile range of diff_firms by year
-summary_stats <- merged %>% group_by(year) %>% 
-  summarize(avg_diff = mean(diff_firms), 
-            q1_diff = quantile(diff_firms, 0.25), 
-            q3_diff = quantile(diff_firms, 0.75))
+# Create a line plot of new firms by year
+plot2 <- ggplot(merged, aes(x = year)) +
+  geom_line(aes(y = bds_firms_age0_ths, color = "BDS")) +
+  geom_line(aes(y = axle_firms_age0_ths, color = "Axle")) +
+  labs(x = "Year", y = "New Firms (Thousands)", color = "Source") +
+  scale_color_manual(values = c("BDS" = "#2a2a2a", "Axle" = "blue")) +
+  scale_y_continuous(limits = c(0, NA)) +
+  theme(panel.background = element_rect(fill = "white"),
+        axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14),
+        legend.position = "bottom",
+        legend.box = "horizontal",
+        legend.margin = margin(t = 0, r = 0, b = 0, l = 0),
+        legend.text = element_text(size = 12),
+        axis.line = element_line(color = "black", linewidth = 0.5))
+# Export the plot as a PDF
+ggsave("output/bds_comparison_age0.pdf", plot2, width = 8, height = 6)
 
-# Plot the average and interquartile range of diff_firms by year
-ggplot(summary_stats, aes(x = year, y = avg_diff)) +
-  geom_line() +
-  geom_ribbon(aes(ymin = q1_diff, ymax = q3_diff), alpha = 0.2) +
-  labs(x = "Year", y = "Difference in Firms (BDS - DA)")
+# Create a line plot of startup by year
+plot3 <- ggplot(merged, aes(x = year)) +
+  geom_line(aes(y = bds_sr, color = "BDS")) +
+  geom_line(aes(y = axle_sr, color = "Axle")) +
+  labs(x = "Year", y = "Startup Rate (%)", color = "Source") +
+  scale_color_manual(values = c("BDS" = "#2a2a2a", "Axle" = "blue")) +
+  scale_y_continuous(limits = c(0, NA)) +
+  theme(panel.background = element_rect(fill = "white"),
+        axis.text = element_text(size = 12),
+        axis.title = element_text(size = 14),
+        legend.position = "bottom",
+        legend.box = "horizontal",
+        legend.margin = margin(t = 0, r = 0, b = 0, l = 0),
+        legend.text = element_text(size = 12),
+        axis.line = element_line(color = "black", linewidth = 0.5))
+# Export the plot as a PDF
+ggsave("output/bds_comparison_sr.pdf", plot3, width = 8, height = 6)
