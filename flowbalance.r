@@ -168,8 +168,8 @@ change_eta_wap <- eta_wap_17 - eta_wap_05
 change_eta_clf <- eta_clf_17 - eta_clf_05
 change_x_bds <- x_bds_17 - x_bds_05
 change_x_axle <- x_axle_17 - x_axle_05
-change_sr_bds <- pred_sr_wap_bds_17 - pred_sr_wap_bds_05
-change_sr_axle <- pred_sr_wap_axle_17 - pred_sr_wap_axle_05
+change_sr_bds <- avg_sr_bds_17 - avg_sr_bds_05
+change_sr_axle <- avg_sr_axle_17 - avg_sr_axle_05
 change_pred_sr_wap_bds <- pred_sr_wap_bds_17 - pred_sr_wap_bds_05
 change_pred_sr_clf_bds <- pred_sr_clf_bds_17 - pred_sr_clf_bds_05
 change_pred_sr_wap_axle <- pred_sr_wap_axle_17 - pred_sr_wap_axle_05
@@ -183,7 +183,7 @@ tab1A <- data.frame(
         "Actual SR (BDS)" = c(avg_sr_bds_05, avg_sr_bds_17, change_sr_bds),
         "Predicted SR (WAP, BDS)" = c(pred_sr_wap_bds_05, pred_sr_wap_bds_17, change_pred_sr_wap_bds),
         "Predicted SR (CLF, BDS)" = c(pred_sr_clf_bds_05, pred_sr_clf_bds_17, change_pred_sr_clf_bds)) %>%
-        mutate_all(round, digits = 1)
+        mutate_all(round, digits = 2)
 tab1B <-data.frame(
         "Labor Supply Gr (WAP)" = c(eta_wap_05, eta_wap_17, change_eta_wap),
         "Labor Supply Gr (CLF)" = c(eta_clf_05, eta_clf_17, change_eta_clf),
@@ -191,11 +191,11 @@ tab1B <-data.frame(
         "Actual SR (Axle)" = c(avg_sr_axle_05, avg_sr_axle_17, change_sr_axle),
         "Predicted SR (WAP, Axle)" = c(pred_sr_wap_axle_05, pred_sr_wap_axle_17, change_pred_sr_wap_axle),
         "Predicted SR (CLF, Axle)" = c(pred_sr_clf_axle_05, pred_sr_clf_axle_17, change_pred_sr_clf_axle)) %>%
-        mutate_all(round, digits = 1)
+        mutate_all(round, digits = 2)
 
 # Use xtable to create a LaTeX table
-table1A <- xtable(tab1A, caption = "Table 1. Flow-Balance Decomposition (BDS)")
-table1B <- xtable(tab1B, caption = "Table 1. Flow-Balance Decomposition (DataAxle)")
+table1A <- xtable(tab1A, caption = "Flow-Balance Decomposition (BDS)")
+table1B <- xtable(tab1B, caption = "Flow-Balance Decomposition (DataAxle)")
 # Export the tables to LaTeX files
 fileA <- "output/tables/table1A.tex"
 print(table1A, file = fileA)
