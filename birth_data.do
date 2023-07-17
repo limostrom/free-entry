@@ -18,7 +18,7 @@ foreach file of local filelist {
 	unzipfile "`file'"
 	local csvname = substr("`file'",1,12)
 	import delimited "`csvname'", clear varn(1)
-	keep stresfip cntyrfip smsarfip
+	keep stresfip cntyrfip
 	ren stresfip statefips
 	ren cntyrfip countyfips
 	bys statefips countyfips: gen births = _N

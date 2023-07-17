@@ -65,6 +65,10 @@ forval y = 1986/1999 {
 	append using "counts`y'.dta"
 }
 
+ren L20_year year
+merge 1:1 year countyfips using "popest_80-99.dta", assert(3)
+ren year L20_year
+
 ren countyfips fipscd
 
 merge m:1 fipscd using `xwalk2', gen(_m1)
