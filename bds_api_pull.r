@@ -10,7 +10,7 @@ outfolder <-"/Users/laurenmostrom/Library/CloudStorage/Dropbox/Personal Document
 # Define the desired variables and filters
 variables <- c("NAME", "NAICS_LABEL", "YEAR", "FAGE", "FIRM", "ESTAB", "EMP")
 
-years <- c(1997:2020)
+years <- c(1979:2019)
 # Note: dropping public administration (92) and unclassified (99) from the NAICS codes
 inds <- c("00", 11, 21, 22, 23, "31-33", 42, "44-45", "48-49", 51, 52, 53, 54, 55, 56, 61, 62, 71, 72, 81)
 
@@ -37,28 +37,7 @@ for (y in years) {
 for (i in inds) {
     for (y in years) {
         # Construct the full URL with parameters
-        url <- paste0(base_url, "?get=", paste(variables, collapse = ","), "&for=metropolitan%20statistical%20area/micropolitan%20statistical%20area:*&time=", y, "&NAICS=", i, "&FAGE=010", "&key=", api_key)
-
-        # Send the HTTP GET request and parse the response
-        response <- GET(url)
-        d <- fromJSON(content(response, "text"))
-        
-        # Remove the first row (header)
-        d <- d[-1, ]
-        d <- as.data.frame(d)
-
-        # Write to CSV
-        write.csv(d, paste0(outfolder, "bds_", y, "_", i,"_age0", ".csv"))
-
-        Sys.sleep(1)
-    }
-}
-
-# Pull total number of firms by year, NAICS 2-digit sector, and MSA
-for (i in inds) {
-    for (y in years) {
-        # Construct the full URL with parameters
-        url <- paste0(base_url, "?get=", paste(variables, collapse = ","), "&for=metropolitan%20statistical%20area/micropolitan%20statistical%20area:*&time=", y, "&NAICS=", i, "&key=", api_key)
+        url <- paste0(base_url, "?get=", paste(variables, collapse = ","), "&for=state:*&time=", y, "&NAICS=", i, "&key=", api_key)
 
         # Send the HTTP GET request and parse the response
         response <- GET(url)
@@ -71,6 +50,7 @@ for (i in inds) {
         # Write to CSV
         write.csv(d, paste0(outfolder, "bds_", y, "_", i, ".csv"))
 
-        Sys.sleep(2)
+        Sys.sleep(1)
     }
 }
+

@@ -31,7 +31,7 @@ axle <- lapply(axlefiles, read_dta)
 axle <- do.call(rbind, axle)
 
 # Merge bds with dataaxle
-merged <- merge(bds_wide, axle, by = "year")
+merged <- merge(bds_wide, axle, by = "year", all.x = TRUE)
 colnames(merged) <- c("year", "bds_firms_tot", "bds_firms_age0", 
             "bds_estabs_tot", "bds_estabs_age0", "axle_firms_age0",
             "axle_firms_tot", "axle_sr")

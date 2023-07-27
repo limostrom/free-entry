@@ -20,8 +20,9 @@ ren FIPS countyfips
 	destring countyfips, replace
 
 egen pop = rowtotal(Under5-yearsandover)
-keep year countyfips pop
-collapse (sum) pop, by(year countyfips)
+ren Under5 pop_under5
+keep year countyfips pop pop_under5
+collapse (sum) pop pop_under5, by(year countyfips)
 
 tempfile pop80
 save `pop80', replace
@@ -36,12 +37,20 @@ forval y = 90/99 {
 
 	split v1, p(" ")
 	gen year = "19" + v11
-		destring year, replace
 	ren v12 countyfips
-		destring countyfips, replace
+	ren v13 agegrp
 	ren v16 pop
-		destring pop, replace
-	collapse (sum) pop, by(year countyfips)
+	destring year countyfips agegrp pop, replace
+	gen age04 = inlist(agegrp,0,1)
+	bys year countyfips age04: egen popsum = total(pop)
+	
+	keep year countyfips age04 popsum
+	duplicates drop
+	reshape wide popsum, i(year countyfips) j(age04)
+		gen pop = popsum0 + popsum1
+		ren popsum1 pop_under5
+		drop popsum0
+	
 	
 	tempfile pop`y'
 	save `pop`y'', replace
@@ -60,7 +69,7 @@ tsfill
 forval i = 1/9 {
 	local j = 10-`i'
 	replace pop = L`i'.pop + (`i'/10) * (F`j'.pop - L`i'.pop) if year == 1980 + `i'
-	pause
+	replace pop_under5 = L`i'.pop_under5 + (`i'/10) * (F`j'.pop_under5 - L`i'.pop_under5) if year == 1980 + `i'
 }
 
 
