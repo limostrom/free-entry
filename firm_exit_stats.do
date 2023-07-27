@@ -17,7 +17,7 @@ local varlist "company employeesize5location employeesize6corporate modeledemplo
 				parentnumber callstatuscode teleresearchupdatedate year1stappeared
 				cbsacode fipscode censustract zipcode primarynaicscode";
 #delimit cr
-
+/*
 forval y = 1997/2021 {
 	use abi `varlist' using "$data_dir/`y'.dta", clear
 	ren * *`y'
@@ -191,7 +191,9 @@ forval y = 1997/2021 {
 
 
 }
+*/
 *-------------------------------------------------------------------------------
+/*
 * Aggregate Appending
 use "$proj_dir/processed-data/exit_rates/agg1997.dta", clear
 
@@ -489,6 +491,222 @@ foreach ind of global industries {
 }
 
 
+* Industry Distribution Conditional on Firm Age -------------------------------
+
+
+use "$proj_dir/processed-data/exit_rates/ind2003.dta", clear
+
+forval y = 2004/2021 {
+	append using "$proj_dir/processed-data/exit_rates/ind`y'.dta"
+}
+
+tempfile industry
+save `industry', replace
+
+
+use "$proj_dir/processed-data/exit_rates/ind2003_er.dta", clear
+
+forval y = 2004/2021 {
+	append using "$proj_dir/processed-data/exit_rates/ind`y'_er.dta"
+}
+
+
+
+	gen naics2 = "11" if naics2desc == "Agriculture, Forestry, Fishing and Hunting"
+		replace naics2 = "21" if naics2desc == "Mining"
+		replace naics2 = "22" if naics2desc == "Utilities"
+		replace naics2 = "23" if naics2desc == "Construction"
+		replace naics2 = "31-33" if naics2desc == "Manufacturing"
+		replace naics2 = "42" if naics2desc == "Wholesale Trade"
+		replace naics2 = "44-45" if naics2desc == "Retail Trade"
+		replace naics2 = "48-49" if naics2desc == "Transportation and Warehousing"
+		replace naics2 = "51" if naics2desc == "Information"
+		replace naics2 = "52" if naics2desc == "Finance and Insurance"
+		replace naics2 = "53" if naics2desc == "Real Estate and Rental and Leasing"
+		replace naics2 = "54" if naics2desc == "Professional, Scientific, and Technical Services"
+		replace naics2 = "55" if naics2desc == "Management of Companies and Enterprises"
+		replace naics2 = "56" if naics2desc == "Administrative and Support and Waste Management and Remediation Services"
+		replace naics2 = "61" if naics2desc == "Educational Services"
+		replace naics2 = "62" if naics2desc == "Health Care and Social Assistance"
+		replace naics2 = "71" if naics2desc == "Arts, Entertainment, and Recreation"
+		replace naics2 = "72" if naics2desc == "Accommodation and Food Services"
+		replace naics2 = "81" if naics2desc == "Other Services (except Public Administration)"
+		replace naics2 = "92" if naics2desc == "Public Administration"
+		#delimit ;
+		global industries Agriculture "Mining" "Utilities" "Construction" "Manufacturing"
+						"Wholesale Trade" "Retail Trade" "Transportation and Warehousing"
+						"Information" "Finance and Insurance" "Real Estate"
+						"Professional" "Management" "Administrative and Support"
+						"Educational Services" "Health Care" "Arts, Entertainment, and Recreation"
+						"Accommodation and Food Services" "Other Services" "Public Administration";
+		#delimit cr
+		
+
+merge 1:1 year naics2desc firm_age using `industry', assert(3)
+
+gsort year firm_age -naics2
+
+gen inddist_y1 = 0 if naics2 == "92"
+gen inddist_y2 = n_firms if naics2 == "92"
+foreach i in "81" "72" "71" "62" "61" "56" "55" "54" "53" "52" "51" "48-49" ///
+				"44-45" "42" "31-33" "23" "22" "21" "11" {
+	replace inddist_y1 = inddist_y2[_n-1] if naics2 == "`i'"
+	replace inddist_y2 = inddist_y1 + n_firms if naics2 == "`i'"
+	br year naics2desc n_firms firm_age inddist_y1 inddist_y2
+	pause
+}
+
+
+replace inddist_y1 = inddist_y1/1000
+replace inddist_y2 = inddist_y2/1000
+
+forval a = 0/11 {
+	if `a' == 11 {
+		local aname "11+"
+	}
+	else {
+		local aname "`a'"
+	}
+	
+	#delimit ;
+	
+	tw (rarea inddist_y1 inddist_y2 year if naics2=="11" & firm_age == `a', col(sandb))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="21" & firm_age == `a', col(sand))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="22" & firm_age == `a', col(erose))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="23" & firm_age == `a', col(brown))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="31-33" & firm_age == `a', col(sienna))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="42" & firm_age == `a', col(olive_teal))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="44-45" & firm_age == `a', col(eltgreen))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="48-49" & firm_age == `a', col(forest_green))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="51" & firm_age == `a', col(dkgreen))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="52" & firm_age == `a', col(eltblue))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="53" & firm_age == `a', col(ebblue))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="54" & firm_age == `a', col(emidblue))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="55" & firm_age == `a', col(edkblue))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="56" & firm_age == `a', col(dknavy))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="61" & firm_age == `a', col(bluishgray))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="62" & firm_age == `a', col(gs12))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="71" & firm_age == `a', col(gs10))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="72" & firm_age == `a', col(gs8))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="81" & firm_age == `a', col(gs6))
+	   (rarea inddist_y1 inddist_y2 year if naics2=="92" & firm_age == `a', col(gs4)),
+	  legend(order(1 "Agriculture" 2 "Mining" 3 "Utilities" 4 "Construction"
+					5 "Manufacturing" 6 "Wholesale" 7 "Retail" 8 "Transportation"
+					9 "Information" 10  "Finance" 10 "Real Estate" 11 "Professional"
+					12 "Management" 13 "Administrative" 14 "Education" 15 "Health Care"
+					16 "Arts" 17 "Accommodation" 18 "Other Svcs" 19 "Public") r(5))
+	  ti("Industry Distribution of Firms (Age `aname')") xti("Year") yti("# of Firms (thousands)" " ")
+	  xlab(2003(2)2021,labsize(small)) ylab(,labsize(small));
+	graph export "$proj_dir/output/firm_inddist_ts_age-`aname'.png", replace as(png);
+	
+	#delimit cr
+}
+
+bys year firm_age: egen tot_firms = max(inddist_y2)
+
+gen indfrac_y1 = inddist_y1/tot_firms*100
+gen indfrac_y2 = inddist_y2/tot_firms*100
+
+forval a = 0/11 {
+	if `a' == 11 {
+		local aname "11+"
+	}
+	else {
+		local aname "`a'"
+	}
+	
+	#delimit ;
+	
+	tw (rarea indfrac_y1 indfrac_y2 year if naics2=="11" & firm_age == `a', col(sandb))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="21" & firm_age == `a', col(sand))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="22" & firm_age == `a', col(erose))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="23" & firm_age == `a', col(brown))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="31-33" & firm_age == `a', col(sienna))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="42" & firm_age == `a', col(olive_teal))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="44-45" & firm_age == `a', col(eltgreen))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="48-49" & firm_age == `a', col(forest_green))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="51" & firm_age == `a', col(dkgreen))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="52" & firm_age == `a', col(eltblue))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="53" & firm_age == `a', col(ebblue))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="54" & firm_age == `a', col(emidblue))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="55" & firm_age == `a', col(edkblue))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="56" & firm_age == `a', col(dknavy))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="61" & firm_age == `a', col(bluishgray))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="62" & firm_age == `a', col(gs12))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="71" & firm_age == `a', col(gs10))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="72" & firm_age == `a', col(gs8))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="81" & firm_age == `a', col(gs6))
+	   (rarea indfrac_y1 indfrac_y2 year if naics2=="92" & firm_age == `a', col(gs4)),
+	  legend(order(1 "Agriculture" 2 "Mining" 3 "Utilities" 4 "Construction"
+					5 "Manufacturing" 6 "Wholesale" 7 "Retail" 8 "Transportation"
+					9 "Information" 10  "Finance" 10 "Real Estate" 11 "Professional"
+					12 "Management" 13 "Administrative" 14 "Education" 15 "Health Care"
+					16 "Arts" 17 "Accommodation" 18 "Other Svcs" 19 "Public") r(5))
+	  ti("Industry Distribution of Firms (Age `aname')") xti("Year") yti("% of Firms" " ")
+	  xlab(2003(2)2021,labsize(small)) ylab(,labsize(small));
+	graph export "$proj_dir/output/firm_indfrac_ts_age-`aname'.png", replace as(png);
+	
+	#delimit cr
+}
+*/
+
+* Exit Rate Heterogeneity Across States
+
+#delimit ;
+	global industries Agriculture "Mining" "Utilities" "Construction" "Manufacturing"
+					"Wholesale Trade" "Retail Trade" "Transportation and Warehousing"
+					"Information" "Finance and Insurance" "Real Estate"
+					"Professional" "Management" "Administrative and Support"
+					"Educational Services" "Health Care" "Arts, Entertainment, and Recreation"
+					"Accommodation and Food Services" "Other Services" "Public Administration";
+#delimit cr
+
+
+use "$proj_dir/processed-data/exit_rates/ind-state2003.dta", clear
+
+forval y = 2004/2021 {
+	append using "$proj_dir/processed-data/exit_rates/ind-state`y'.dta"
+}
+
+drop if naics2desc == ""
+gen er = firm_exit / n_firms
+collapse (sum) firm_exit n_firms (p25) er_p25 = er ///
+		 (mean) er_mean = er (p75) er_p75 = er, by(year firm_age naics2desc)
+gen er = firm_exit / n_firms
+
+
+foreach ind of global industries {
+	#delimit ;
+	
+	* Compare firms ages 0, 6, and 11;
+	replace year = year + 0.1 if firm_age == 6;
+	replace year = year + 0.2 if firm_age == 11;
+	
+	tw (rcap er_p25 er_p75 year if strpos(naics2desc,"`ind'") ==1 & firm_age == 11, lc(edkblue))
+	   (scatter er year if strpos(naics2desc,"`ind'") ==1 & firm_age == 11, msym(O) mc(eltblue))
+	   (scatter er_mean year if strpos(naics2desc,"`ind'") ==1 & firm_age == 11, msym(X) mc(edkblue))
+	   (rcap er_p25 er_p75 year if strpos(naics2desc,"`ind'") ==1 & firm_age == 6, lc(dkorange))
+	   (scatter er year if strpos(naics2desc,"`ind'") ==1 & firm_age == 6, msym(O) mc(sand))
+	   (scatter er_mean year if strpos(naics2desc,"`ind'") ==1 & firm_age == 6, msym(X) mc(dkorange))
+	   (rcap er_p25 er_p75 year if strpos(naics2desc,"`ind'") ==1 & firm_age == 0, lc(cranberry))
+	   (scatter er year if strpos(naics2desc,"`ind'") ==1 & firm_age == 0, msym(O) mc(erose))
+	   (scatter er_mean year if strpos(naics2desc,"`ind'") ==1 & firm_age == 0, msym(X) mc(cranberry)),
+	  legend(order(8 "Exit Rate (Age 0)" 5 "Exit Rate (Age 6)" 2 "Exit Rate (Age 11)"
+				   9 "Mean ER Across States" 7 "IQR Across States") r(2))
+	  ti("`ind' Exit Rate") xti("Year") yti("")
+	  xlab(2003(2)2021,labsize(small)) ylab(,labsize(small));
+	graph export "$proj_dir/output/exit_age0-11_ts_ind-`ind'.png", replace as(png);
+	
+	replace year = year - 0.1 if firm_age == 6;
+	replace year = year - 0.2 if firm_age == 11;
+	
+	#delimit cr
+}
+
+
+
+
+/*
 * By CBSA (tracts)
 
 use "$proj_dir/processed-data/exit_rates/cbsa1997.dta", clear
@@ -630,4 +848,4 @@ foreach city in "New York" "Los Angeles" "Chicago" "Houston" "Phoenix" "Philadel
 	#delimit cr
 }
 
-
+*/

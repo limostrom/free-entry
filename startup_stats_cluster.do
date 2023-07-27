@@ -55,7 +55,7 @@ gen naics2 = int(primarynaicscode/1000000)
 					"Accommodation and Food Services" "Other Services" "Public Administration";
 	#delimit cr
 	
-
+/*
 
 preserve // Aggregate startup rate over time, IQR for states
 	gen statefips = int(fipscode/1000)
@@ -98,6 +98,21 @@ preserve // Industry-by-CBSA-level startup rate
 	gen year = `y'
 	
 	save "startup_rates/ind-cbsa`y'.dta", replace
+restore
+*/
+
+preserve // Industry-by-State-level startup rate
+	gen statefips = int(fipscode/1000)
+	egen tag_indst = tag(parentnumber naics2desc statefips)
+		drop if tag_indst == 0 & parentnumber != .
+		
+	collapse (sum) new_firm (count) n_firms = abi, by(naics2desc state) fast
+	drop if naics2desc == ""
+
+	gen sr = new_firm/n_firms
+	gen year = `y'
+	
+	save "startup_rates/ind-state`y'.dta", replace
 restore
 
 

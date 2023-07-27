@@ -1,0 +1,372 @@
+
+  ___  ____  ____  ____  ____ ®
+ /__    /   ____/   /   ____/      17.0
+___/   /   /___/   /   /___/       BE—Basic Edition
+
+ Statistics and Data Science       Copyright 1985-2021 StataCorp LLC
+                                   StataCorp
+                                   4905 Lakeway Drive
+                                   College Station, Texas 77845 USA
+                                   800-STATA-PC        https://www.stata.com
+                                   979-696-4600        stata@stata.com
+
+Stata license: 22-user network, expiring 30 Jun 2025
+Serial number: 501809309427
+  Licensed to: The University of Chicago Booth School of Business
+               Mercury Computing Cluster
+
+Notes:
+      1. Stata is running in batch mode.
+      2. Unicode is supported; see help unicode_advice.
+
+. do "firm_exit_stats_cluster.do" 
+
+. /*
+> Lauren Mostrom
+> 2nd Year Paper: Finance and Dynamism
+> 
+> firm_exit_stats_cluster.do
+> 
+> */
+. 
+. 
+. #delimit ;
+delimiter now ;
+. local varlist "company employeesize5location employeesize6corporate modeledem
+> ployeesize
+>                                 parentnumber callstatuscode teleresearchupdat
+> edate year1stappeared
+>                                 cbsacode fipscode censustract zipcode primary
+> naicscode";
+
+. #delimit cr
+delimiter now cr
+. 
+. forval y = 1997/2002 {
+  2. 
+.         local yp = `y' + 1
+  3. 
+.         zipuse "`yp'.dta.zip", clear
+  4.         drop if abi == .
+  5.         tempfile temp`yp'
+  6.         save `temp`yp'', replace
+  7. 
+. 
+.         zipuse abi `varlist' using "`y'.dta.zip", clear
+  8.         ren * *`y'
+  9.         ren abi`y' abi
+ 10.         drop if abi == .
+ 11.         sort abi
+ 12.         
+.         isid abi
+ 13.         
+.         if `yp' < 2022 {
+ 14.         merge 1:1 abi using `temp`yp'', keepus(`varlist')
+ 15.         }
+ 16.         if `yp' == 2022 {
+ 17.         merge 1:1 abi using `temp`yp''
+ 18.         }
+ 19.         
+.         
+.         ren * *`yp'
+ 20.         ren abi`yp' abi
+ 21.         ren *`y'`yp' *`y'
+ 22.         
+.         
+.         gen est_exit = _merge == 1
+ 23.         bys parentnumber`y': egen all_close = min(est_exit)
+ 24.                 gen firm_exit = all_close if parentnumber`y' != .
+ 25.                 replace firm_exit = est_exit if parentnumber`y' == .
+ 26.                 
+.         gen est_age = `y' - year1stappeared`y'
+ 27.                 bys parentnumber`y': egen max_est_age = max(est_age)
+ 28.                 gen firm_age = max_est_age if parentnumber`y' != .
+ 29.                 replace firm_age = est_age if parentnumber`y' == .
+ 30.                 replace firm_age = 11 if firm_age >= 11
+ 31.         
+.         
+.         gen naics2 = int(primarynaicscode`y'/1000000)
+ 32.                 gen naics2desc = "Agriculture, Forestry, Fishing and Hunti
+> ng" if naics2 == 11
+ 33.                 replace naics2desc = "Mining" if naics2 == 21
+ 34.                 replace naics2desc = "Utilities" if naics2 == 22
+ 35.                 replace naics2desc = "Construction" if naics2 == 23
+ 36.                 replace naics2desc = "Manufacturing" if inrange(naics2, 31
+> , 33)
+ 37.                 replace naics2desc = "Wholesale Trade" if naics2 == 42
+ 38.                 replace naics2desc = "Retail Trade" if inrange(naics2, 44,
+>  45)
+ 39.                 replace naics2desc = "Transportation and Warehousing" if i
+> nrange(naics2, 48, 49)
+ 40.                 replace naics2desc = "Information" if naics2 == 51
+ 41.                 replace naics2desc = "Finance and Insurance" if naics2 == 
+> 52
+ 42.                 replace naics2desc = "Real Estate and Rental and Leasing" 
+> if naics2 == 53
+ 43.                 replace naics2desc = "Professional, Scientific, and Techni
+> cal Services" if naics2 == 54
+ 44.                 replace naics2desc = "Management of Companies and Enterpri
+> ses" if naics2 == 55
+ 45.                 replace naics2desc = "Administrative and Support and Waste
+>  Management and Remediation Services" if naics2 == 56
+ 46.                 replace naics2desc = "Educational Services" if naics2 == 6
+> 1
+ 47.                 replace naics2desc = "Health Care and Social Assistance" i
+> f naics2 == 62
+ 48.                 replace naics2desc = "Arts, Entertainment, and Recreation"
+>  if naics2 == 71
+ 49.                 replace naics2desc = "Accommodation and Food Services" if 
+> naics2 == 72
+ 50.                 replace naics2desc = "Other Services (except Public Admini
+> stration)" if naics2 == 81
+ 51.                 replace naics2desc = "Public Administration" if naics2 == 
+> 92
+ 52.                 #delimit ;
+delimiter now ;
+.                 global industries Agriculture "Mining" "Utilities" "Construct
+> ion" "Manufacturing"
+>                                                 "Wholesale Trade" "Retail Tra
+> de" "Transportation and Warehousing"
+>                                                 "Information" "Finance and In
+> surance" "Real Estate"
+>                                                 "Professional" "Management" "
+> Administrative and Support"
+>                                                 "Educational Services" "Healt
+> h Care" "Arts, Entertainment, and Recreation"
+>                                                 "Accommodation and Food Servi
+> ces" "Other Services" "Public Administration";
+ 53.                 #delimit cr
+delimiter now cr
+. 
+. 
+.         gen cbsaname = "New York-Newark-Jersey City, NY-NJ-PA" if cbsacode`y'
+>  == 35620
+ 54.                 replace cbsaname = "Los Angeles-Long Beach-Anaheim, CA" if
+>  cbsacode`y' == 31080
+ 55.                 replace cbsaname = "Chicago-Naperville-Elgin, IL-IN-WI" if
+>  cbsacode`y' == 16980
+ 56.                 replace cbsaname = "Houston-The Woodlands-Sugar Land, TX" 
+> if cbsacode`y' == 26420
+ 57.                 replace cbsaname = "Phoenix-Mesa-Scottsdale, AZ" if cbsaco
+> de`y' == 38060
+ 58.                 replace cbsaname = "Philadelphia-Camden-Wilmington, PA-NJ-
+> DE-MD" if cbsacode`y' == 37980
+ 59.                 
+.         cap mkdir "exit_rates"
+ 60. 
+.         /*
+>         preserve // Aggregate exit rate over time
+>                 egen tagged = tag(parentnumber`y')
+>                         drop if tagged == 0 & parentnumber`y' != .
+>                         
+>                 collapse (sum) firm_exit (count) n_firms = abi, by(firm_age) 
+> fast
+> 
+>                 gen er = firm_exit/n_firms
+>                 gen year = `y'
+>                 
+>                 save "exit_rates/agg`y'_er.dta", replace
+>         restore 
+>         preserve // Aggregate exit rate over time, IQR for states
+>                 gen statefips = int(fipscode`y'/1000)
+>                 egen tag_state = tag(parentnumber`y' statefips)
+>                         drop if tag_state == 0 & parentnumber`y' != .
+>                         
+>                 collapse (sum) firm_exit (count) n_firms = abi, by(statefips 
+> firm_age) fast
+> 
+>                 gen er = firm_exit/n_firms
+>                 collapse (mean) er_mean = er (p25) er_p25 = er (p75) er_p75 =
+>  er, by(firm_age) fast
+>                 gen year = `y'
+>                 
+>                 save "exit_rates/agg`y'.dta", replace
+>         restore
+>         */
+.         
+.         preserve // Exiting and total # of firms, by state and sector
+ 61.                 gen statefips = int(fipscode`y'/1000)
+ 62.                 egen tag_state = tag(parentnumber`y' statefips)
+ 63.                         drop if tag_state == 0 & parentnumber`y' != .
+ 64.                         
+.                 collapse (sum) firm_exit (count) n_firms = abi, by(statefips 
+> firm_age naics2desc) fast
+ 65.                 gen year = `y'
+ 66.                 
+.                 save "exit_rates/ind-state`y'.dta", replace
+ 67.         
+.         
+.         /*
+>         preserve // Industry-level startup rate
+>                 egen tag_ind = tag(parentnumber`y' naics2desc)
+>                         drop if tag_ind == 0 & parentnumber`y' != .
+>                         
+>                 collapse (sum) firm_exit (count) n_firms = abi, by(naics2desc
+>  firm_age) fast
+>                 drop if naics2desc == ""
+> 
+>                 gen er = firm_exit/n_firms
+>                 gen year = `y'
+>                 
+>                 save "exit_rates/ind`y'_er.dta", replace
+>         restore
+> 
+>         preserve // Industry-level startup rate, IQR for CBSAs
+>                 drop if cbsacode`y' == .
+>                 egen tag_indcbsa = tag(parentnumber`y' naics2desc cbsacode`y'
+> )
+>                         drop if tag_indcbsa == 0 & parentnumber`y' != .
+>                         
+>                 collapse (sum) firm_exit (count) n_firms = abi, by(naics2desc
+>  cbsacode`y' firm_age) fast
+>                 drop if naics2desc == ""
+> 
+>                 gen er = firm_exit/n_firms
+>                 collapse (mean) er_mean = er (p25) er_p25 = er (p75) er_p75 =
+>  er, by(naics2desc firm_age) fast
+>                 gen year = `y'
+>                 
+>                 save "exit_rates/ind`y'.dta", replace
+>         restore 
+>         
+>         preserve // CBSA-level exit rate
+>                 drop if cbsaname == ""
+>                 egen tag_cbsa = tag(parentnumber`y' cbsacode`y')
+>                         drop if tag_cbsa == 0 & parentnumber`y' != .
+>                         
+>                 collapse (sum) firm_exit (count) n_firms = abi, by(cbsacode`y
+> ' cbsaname firm_age) fast
+> 
+>                 gen er = firm_exit/n_firms
+>                 gen year = `y'
+>                 
+>                 save "exit_rates/cbsa`y'_er.dta", replace
+>         restore
+> 
+>         preserve // CBSA-level exit rate, IQR for zipcodes within that 
+>                 drop if cbsaname == ""
+>                 egen tag_zip = tag(parentnumber`y' cbsacode`y' zipcode`y')
+>                         drop if tag_zip == 0 & parentnumber`y' != .
+>                         
+>                 collapse (sum) firm_exit (count) n_firms = abi, by(cbsacode`y
+> ' cbsaname zipcode`y' firm_age) fast
+>                 drop if zipcode == .
+> 
+>                 gen er = firm_exit/n_firms
+>                 collapse (mean) er_mean = er (p25) er_p25 = er (p75) er_p75 =
+>  er, by(cbsacode`y' cbsaname firm_age) fast
+>                 gen year = `y'
+>                 
+>                 save "exit_rates/cbsa`y'.dta", replace
+>         restore
+> 
+> */
+. 
+. }
+(0 observations deleted)
+(file /scratch/lmostrom/10720134/St1675210.000001 not found)
+file /scratch/lmostrom/10720134/St1675210.000001 saved as .dta format
+(0 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                     3,271,534
+        from master                 1,880,623  (_merge==1)
+        from using                  1,390,911  (_merge==2)
+
+    Matched                         9,383,298  (_merge==3)
+    -----------------------------------------
+(11,325,393 missing values generated)
+(11,325,393 real changes made)
+(1,391,644 missing values generated)
+(11,325,393 missing values generated)
+(9,934,452 real changes made)
+(4,580,459 real changes made)
+(1,451,495 missing values generated)
+(12,594,386 missing values generated)
+(23,463 real changes made)
+(17,970 real changes made)
+(801,238 real changes made)
+(510,724 real changes made)
+(731,067 real changes made)
+(1,756,809 real changes made)
+(226,322 real changes made)
+(180,465 real changes made)
+(543,475 real changes made)
+(472,993 real changes made)
+variable naics2desc was str42 now str48
+(1,219,377 real changes made)
+(4,413 real changes made)
+variable naics2desc was str48 now str72
+(377,588 real changes made)
+(241,009 real changes made)
+(1,251,980 real changes made)
+(154,023 real changes made)
+(637,375 real changes made)
+(1,415,108 real changes made)
+(405,439 real changes made)
+(11,886,246 missing values generated)
+(471,898 real changes made)
+(359,775 real changes made)
+(179,283 real changes made)
+(100,743 real changes made)
+variable cbsaname was str37 now str43
+(221,881 real changes made)
+(1,390,939 missing values generated)
+(1,184,924 observations deleted)
+(file exit_rates/ind-state1997.dta not found)
+file exit_rates/ind-state1997.dta saved
+(0 observations deleted)
+(file /scratch/lmostrom/10720134/St1675210.000003 not found)
+file /scratch/lmostrom/10720134/St1675210.000003 saved as .dta format
+(0 observations deleted)
+
+    Result                      Number of obs
+    -----------------------------------------
+    Not matched                     3,083,305
+        from master                 1,418,724  (_merge==1)
+        from using                  1,664,581  (_merge==2)
+
+    Matched                         9,355,485  (_merge==3)
+    -----------------------------------------
+(11,174,780 missing values generated)
+(11,174,780 real changes made)
+(1,664,581 missing values generated)
+(11,174,780 missing values generated)
+(9,510,199 real changes made)
+(4,831,409 real changes made)
+(1,717,814 missing values generated)
+(12,381,008 missing values generated)
+(20,450 real changes made)
+(15,811 real changes made)
+(744,338 real changes made)
+(456,056 real changes made)
+(701,067 real changes made)
+(1,693,169 real changes made)
+(220,193 real changes made)
+(173,002 real changes made)
+(514,405 real changes made)
+(452,395 real changes made)
+variable naics2desc was str42 now str48
+(1,201,617 real changes made)
+(4,849 real changes made)
+variable naics2desc was str48 now str72
+(365,871 real changes made)
+(240,091 real changes made)
+(1,149,094 real changes made)
+(150,812 real changes made)
+(627,481 real changes made)
+(1,443,893 real changes made)
+(377,676 real changes made)
+(11,714,313 missing values generated)
+(444,539 real changes made)
+(338,189 real changes made)
+(172,705 real changes made)
+(95,646 real changes made)
+variable cbsaname was str37 now str43
+(213,931 real changes made)
+already preserved
+r(621);
+
+end of do-file
+r(621);

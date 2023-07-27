@@ -87,7 +87,6 @@ gen cbsaname = "New York-Newark-Jersey City, NY-NJ-PA" if cbsacode == 35620
 	replace cbsaname = "Houston-The Woodlands-Sugar Land, TX" if cbsacode == 26420
 	replace cbsaname = "Phoenix-Mesa-Scottsdale, AZ" if cbsacode == 38060
 	replace cbsaname = "Philadelphia-Camden-Wilmington, PA-NJ-DE-MD" if cbsacode == 37980
-	
 
 
 preserve // Aggregate startup rate over time, IQR for states

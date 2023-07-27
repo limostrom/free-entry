@@ -13,7 +13,7 @@ local varlist "company employeesize5location employeesize6corporate modeledemplo
 				cbsacode fipscode censustract zipcode primarynaicscode";
 #delimit cr
 
-forval y = 1997/2002 {
+forval y = 2003/2021 {
 
 	local yp = `y' + 1
 
@@ -96,7 +96,8 @@ forval y = 1997/2002 {
 		
 	cap mkdir "exit_rates"
 
-	preserve // Aggregate startup rate over time
+	/*
+	preserve // Aggregate exit rate over time
 		egen tagged = tag(parentnumber`y')
 			drop if tagged == 0 & parentnumber`y' != .
 			
@@ -120,7 +121,20 @@ forval y = 1997/2002 {
 		
 		save "exit_rates/agg`y'.dta", replace
 	restore
+	*/
+	
+	preserve // Exiting and total # of firms, by state and sector
+		gen statefips = int(fipscode`y'/1000)
+		egen tag_state = tag(parentnumber`y' statefips)
+			drop if tag_state == 0 & parentnumber`y' != .
+			
+		collapse (sum) firm_exit (count) n_firms = abi, by(statefips firm_age naics2desc) fast
+		gen year = `y'
 		
+		save "exit_rates/ind-state`y'.dta", replace
+	restore
+	
+	/*
 	preserve // Industry-level startup rate
 		egen tag_ind = tag(parentnumber`y' naics2desc)
 			drop if tag_ind == 0 & parentnumber`y' != .
@@ -149,7 +163,7 @@ forval y = 1997/2002 {
 		save "exit_rates/ind`y'.dta", replace
 	restore	
 	
-	preserve // CBSA-level startup rate
+	preserve // CBSA-level exit rate
 		drop if cbsaname == ""
 		egen tag_cbsa = tag(parentnumber`y' cbsacode`y')
 			drop if tag_cbsa == 0 & parentnumber`y' != .
@@ -162,7 +176,7 @@ forval y = 1997/2002 {
 		save "exit_rates/cbsa`y'_er.dta", replace
 	restore
 
-	preserve // CBSA-level startup rate, IQR for zipcodes within that 
+	preserve // CBSA-level exit rate, IQR for zipcodes within that 
 		drop if cbsaname == ""
 		egen tag_zip = tag(parentnumber`y' cbsacode`y' zipcode`y')
 			drop if tag_zip == 0 & parentnumber`y' != .
@@ -177,6 +191,6 @@ forval y = 1997/2002 {
 		save "exit_rates/cbsa`y'.dta", replace
 	restore
 
-
+*/
 
 }
