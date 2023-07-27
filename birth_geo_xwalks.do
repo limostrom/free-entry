@@ -14,23 +14,6 @@ cd "Y2 Paper/Finance & Dynamism/raw-data/"
 * Crosswalks *
 **************
 
-* First import SMSA -> MSA Crosswalk
-import excel "FR05_CBSA_MSA_XWALK_pub.xls", clear first case(lower)
-
-ren newmsaif newmsa
-keep oldmsa newmsa fipscd st
-
-keep if newmsa != ""
-destring fipscd, replace
-
-replace oldmsa = subinstr(oldmsa, " L", "", .)
-destring oldmsa, replace
-
-duplicates drop
-
-tempfile xwalk1
-save `xwalk1', replace
-
 * Then import MSA -> CBSA Crosswalk for merging with present numbers
 import delimited "cbsa2fipsxw.csv", clear
 
@@ -49,8 +32,7 @@ destring fipscd, replace
 	
 isid fipscd
 	
-tempfile xwalk2
-save `xwalk2', replace
+save "../processed-data/county_cbsa_xwalk.dta", replace
 
 
 **************
@@ -59,36 +41,47 @@ save `xwalk2', replace
 
 cd "../processed-data/birth_counts"
 
-use "counts1985.dta", clear
+use "counts1982.dta", clear
 
-forval y = 1986/1999 {
+forval y = 1983/1988 {
 	append using "counts`y'.dta"
 }
 
 ren L20_year year
-merge 1:1 year countyfips using "popest_80-99.dta", assert(3)
+merge 1:1 year countyfips using "popest_80-99.dta", keep(2 3)
+	drop if inlist(year, 1980, 1981)
+	// -------------------------------------------------------------------------
+	// Problem: Birth counts by county are only available up through 1988;
+	// for 1989-2004, they are only available for counties with a population
+	// of 100k people or greater, and for 2005-Present they are not available by
+	// county at all. To deal with this problem I'm instead using population
+	// under 5, but will also compare the correlations for this series and the
+	// birthrate series for 1982-1988 for which both are available.
+	// -------------------------------------------------------------------------
 ren year L20_year
+	replace merge_year = L20_year + 20 if merge_year == .
 
 ren countyfips fipscd
+replace statefips = int(fipscd/1000) if statefips == .
 
-merge m:1 fipscd using `xwalk2', gen(_m1)
+merge m:1 fipscd using "../county_cbsa_xwalk.dta", gen(_m1) keep(1 3)
+	gen nonmetro = _m1 == 1
 
-* First compute total births by CBSA
+replace cbsacode = statefips if nonmetro
+
+* First compute total births, pop, and pop under 5 by CBSA
 preserve
-	keep if cbsacode != .
-	collapse (sum) births, by(L20_year merge_year cbsacode)
-		ren births metro_births
+	keep if nonmetro == 0
+	collapse (sum) births pop pop_under5, by(L20_year merge_year cbsacode nonmetro)
 	assert cbsacode > 100
 	tempfile metro
 	save `metro', replace
 restore
 
-* Now compute and append rural (nonmetro) births by state
+* Now compute and append rural (nonmetro) by state
 preserve
-	keep if cbsacode == .
-	collapse (sum) births, by(L20_year merge_year statefips)
-		ren births nonmetro_births
-	ren statefips cbsacode
+	keep if nonmetro == 1
+	collapse (sum) births pop pop_under5, by(L20_year merge_year cbsacode nonmetro)
 	tempfile nonmetro
 	save `nonmetro', replace
 restore
@@ -96,8 +89,13 @@ restore
 use `metro', clear
 append using `nonmetro'
 
-drop if cbsacode == . | L20_year == .
+replace births = . if births == 0
 
-export delimited "cbsa_nmstate_ts.csv", replace
+gen birthrate = births / (pop / 1000) // births per 1,000 people
+gen sh_under5 = pop_under5 / pop // share of pop under 5 (alt IV)
+
+sort cbsacode L20_year
+
+save "birth_instrument_ts.dta", replace
 
 
