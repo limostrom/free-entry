@@ -41,12 +41,17 @@ save "../processed-data/county_cbsa_xwalk.dta", replace
 
 cd "../processed-data/birth_counts"
 
-use "counts1982.dta", clear
+use "counts1968.dta", clear
 
-forval y = 1983/1988 {
+forval y = 1969/1988 {
 	append using "counts`y'.dta"
 }
 
+preserve
+	collapse (sum) births, by(L20_year merge_year statefips)
+	save "../birth_iv_bystate.dta", replace
+restore
+sdf
 ren L20_year year
 merge 1:1 year countyfips using "popest_80-99.dta", keep(2 3)
 	drop if inlist(year, 1980, 1981)

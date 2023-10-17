@@ -11,7 +11,11 @@ library(tidyr)
 
 setwd("~/Dropbox/Personal Document Backup/Booth/Second Year/Y2 Paper/Finance & Dynamism/")
 filepath <- "raw-data/intercensal_pop/"
-
+# 1960-1969 ================================================================
+ic60 <- read.csv("processed-data/intercensal_1960s.csv", header = TRUE)
+iv60 <- ic60 %>%
+    mutate(year = year + 20) %>%
+    rename(L20_pop_under5 = pop_under5, L20_pop = pop)
 # 1970-1979 ================================================================
 fwf <- fwf_widths(c(2, 3, 10, rep(8,11)))
 ic70 <- read_fwf(paste0(filepath, "e7080sta.txt"), fwf, skip=14)
@@ -170,7 +174,7 @@ wap <- rbind(wap70, wap80, wap90, wap00, wap05) %>%
             wap_hp = as.vector(wap_hp)) %>%
         ungroup()
 
-iv <- rbind(iv70, iv80, iv90) %>%
+iv <- rbind(iv60, iv70, iv80, iv90) %>%
         filter(!is.na(statefips)) %>%
         distinct() %>%
         group_by(statefips) %>%
@@ -184,5 +188,5 @@ iv <- rbind(iv70, iv80, iv90) %>%
 rhs <- merge(wap, iv, by = c("year", "statefips"), all.x = TRUE) %>%
     mutate(statefips = as.numeric(statefips),
             year = as.numeric(year))
-            
+
 write.csv(rhs, "processed-data/rhs_bystate.csv", row.names = FALSE)
